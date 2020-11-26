@@ -350,7 +350,9 @@ void JogFrameNode::jog_frame_cb(jog_msgs::JogFrameConstPtr msg)
     {
       control_msgs::FollowJointTrajectoryGoal goal;
       goal.trajectory.header.stamp = ros::Time::now();
-      goal.trajectory.header.frame_id = "base_link";
+      // (chongyi zheng): dynamic frame_id
+      // goal.trajectory.header.frame_id = "base_link";
+      goal.trajectory.header.frame_id = msg->header.frame_id;
       goal.trajectory.joint_names = joint_names;
       goal.trajectory.points.push_back(point);
 
@@ -360,7 +362,9 @@ void JogFrameNode::jog_frame_cb(jog_msgs::JogFrameConstPtr msg)
     {
       trajectory_msgs::JointTrajectory traj;
       traj.header.stamp = ros::Time::now();
-      traj.header.frame_id = "base_link";
+      // (chongyi zheng): dynamic frame_id
+      // traj.header.frame_id = "base_link";
+      traj.header.frame_id = msg->header.frame_id;
       traj.joint_names = joint_names;
       traj.points.push_back(point);
       

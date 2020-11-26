@@ -191,20 +191,24 @@ void JogFramePanel::onInitialize()
 
 void JogFramePanel::update()
 {
-  tf::TransformListener* tf = vis_manager_->getTFClient();
-  tf::StampedTransform transform;
+  // (chongyi zheng): update to be compatible with ROS Noetic
+  // tf::TransformListener* tf = vis_manager_->getTFClient();
+  // tf::StampedTransform transform;
+  std::shared_ptr<tf2_ros::Buffer> tf(vis_manager_->getTF2BufferPtr());
+  geometry_msgs::TransformStamped transform_msg;
   try{
-    tf->lookupTransform(frame_id_, target_link_id_, ros::Time(0), transform);
+    transform_msg = tf->lookupTransform(frame_id_, target_link_id_, ros::Time(0));
   }
-  catch (tf::TransformException ex){
+  catch (tf2::TransformException ex){
     ROS_ERROR("%s",ex.what());
   }  
-  fillNumericLabel(pos_x_text_, transform.getOrigin().x());
-  fillNumericLabel(pos_y_text_, transform.getOrigin().y());
-  fillNumericLabel(pos_z_text_, transform.getOrigin().z());
+  fillNumericLabel(pos_x_text_, transform_msg.transform.translation.x);
+  fillNumericLabel(pos_y_text_, transform_msg.transform.translation.y);
+  fillNumericLabel(pos_z_text_, transform_msg.transform.translation.z);
 
   // RPY
-  tf::Quaternion q = transform.getRotation();
+  tf::Quaternion q(transform_msg.transform.rotation.x, transform_msg.transform.rotation.y,
+    transform_msg.transform.rotation.z, transform_msg.transform.rotation.w);
   tf::Matrix3x3 m(q);
   double roll, pitch, yaw;
   m.getRPY(roll, pitch, yaw);
@@ -232,7 +236,7 @@ void JogFramePanel::updateFrame()
 {
   typedef std::vector<std::string> V_string;
   V_string frames;
-  vis_manager_->getTFClient()->getFrameStrings( frames );
+  vis_manager_->getTF2BufferPtr()->_getFrameStrings( frames );
   std::sort(frames.begin(), frames.end());
   frame_cbox_->clear();
   for (V_string::iterator it = frames.begin(); it != frames.end(); ++it )
@@ -300,6 +304,7 @@ void JogFramePanel::publish()
   // Publish if the button is enabled
   if(jog_button_->isChecked())
   {
+    // TODO (chongyi zheng): update this maybe
     // Publish only if the all command are not equal zero
     // Not good, we need to compare slider value by some way...
     if (msg.linear_delta.x != 0 || msg.linear_delta.y != 0 || msg.linear_delta.z != 0 ||
