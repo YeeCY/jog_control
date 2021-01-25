@@ -89,7 +89,7 @@ JogFrameNode::JogFrameNode()
     use_action_ = true;
   }
   // Exclude joint list
-  gnh.getParam("exclude_joint_names", exclude_joints_);
+  pnh.getParam("exclude_joint_names", exclude_joints_);
 
   if (get_controller_list() < 0)
   {
@@ -176,7 +176,8 @@ void JogFrameNode::jog_frame_cb(jog_msgs::JogFrameConstPtr msg)
     }    
   }
   // Update reference frame only if the stamp is older than last_stamp_ + time_from_start_
-  if (msg->header.stamp > last_stamp_ + ros::Duration(time_from_start_))
+  // if (msg->header.stamp > last_stamp_ + ros::Duration(time_from_start_))
+  if (true)
   {
     joint_state_.name.clear();
     joint_state_.position.clear();
@@ -188,7 +189,7 @@ void JogFrameNode::jog_frame_cb(jog_msgs::JogFrameConstPtr msg)
       if (std::find(exclude_joints_.begin(),
                     exclude_joints_.end(), it->first) != exclude_joints_.end())
       {
-        ROS_INFO_STREAM("joint " << it->first << "is excluded from FK");
+        ROS_DEBUG_STREAM("joint " << it->first << "is excluded from FK");
         continue;
       }
       // Update reference joint_state
@@ -225,7 +226,7 @@ void JogFrameNode::jog_frame_cb(jog_msgs::JogFrameConstPtr msg)
     }
     else
     {
-      ROS_ERROR("Failed to call service /computte_fk");
+      ROS_ERROR("Failed to call service /compute_fk");
       return;
     }
   }
@@ -323,9 +324,9 @@ void JogFrameNode::jog_frame_cb(jog_msgs::JogFrameConstPtr msg)
 
     std::vector<double> positions, velocities, accelerations;
 
-    positions.resize(joint_names.size());
-    velocities.resize(joint_names.size());
-    accelerations.resize(joint_names.size());
+    // positions.resize(joint_names.size());
+    // velocities.resize(joint_names.size());
+    // accelerations.resize(joint_names.size());
 
     for (int i=0; i<joint_names.size(); i++)
     {
@@ -336,10 +337,25 @@ void JogFrameNode::jog_frame_cb(jog_msgs::JogFrameConstPtr msg)
       {
         ROS_WARN_STREAM("Cannot find joint " << joint_names[i] << " in IK solution");        
       }
-      positions[i] = state.position[index];
-      velocities[i] = 0;
-      accelerations[i] = 0;
+
+      if (std::find(exclude_joints_.begin(),
+                    exclude_joints_.end(), joint_names[i]) != exclude_joints_.end())
+      {
+        ROS_DEBUG_STREAM("joint " << joint_names[i] << "is excluded from command");
+        continue;
+      }
+
+      positions.push_back(state.position[index]);
+      velocities.push_back(0);
+      accelerations.push_back(0);
     }
+
+    if (positions.size() == 0) 
+    {
+      ROS_DEBUG_STREAM("Skip empty command!");
+      continue;
+    }
+
     trajectory_msgs::JointTrajectoryPoint point;
     point.positions = positions;
     point.velocities = velocities;
